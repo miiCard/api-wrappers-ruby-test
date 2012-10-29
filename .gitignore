@@ -1,3 +1,4 @@
+*.suo
 *.rbc
 *.sassc
 .sass-cache
