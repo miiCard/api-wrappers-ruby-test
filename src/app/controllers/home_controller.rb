@@ -13,7 +13,10 @@ class HomeController < ActionController::Base
 			
 			@view_model.social_account_type = request.POST['social-account-type']
 			@view_model.social_account_id = request.POST['social-account-id']
-			
+
+			@view_model.snapshot_id = request.POST['snapshot-id']
+			@view_model.snapshot_details_id = request.POST['snapshot-details-id']
+
 			@view_model.assurance_image_type = request.POST['assurance-image-type']
 			
 			action = request.POST['btn-invoke']
@@ -30,6 +33,12 @@ class HomeController < ActionController::Base
 				@view_model.last_is_social_account_assured_result = prettify_response(api.is_social_account_assured(@view_model.social_account_id, @view_model.social_account_type), nil)
 			elsif action == "assurance-image" && !@view_model.assurance_image_type.nil?
 				@view_model.show_assurance_image = true
+			elsif action == "create-identity-snapshot"
+				@view_model.last_create_identity_snapshot_result = prettify_response(api.create_identity_snapshot(), self.method(:prettify_identity_snapshot_details))
+			elsif action == "get-identity-snapshot-details"
+				@view_model.last_get_identity_snapshot_details_result = prettify_response(api.get_identity_snapshot_details(@view_model.snapshot_details_id), self.method(:prettify_identity_snapshot_details))
+			elsif action == "get-identity-snapshot" && !@view_model.snapshot_id.nil?
+				@view_model.last_get_identity_snapshot_result = prettify_response(api.get_identity_snapshot(@view_model.snapshot_id), self.method(:prettify_identity_snapshot))
 			end
 		elsif !action.nil?
 			@view_model.show_oauth_details_required_error = true
@@ -61,6 +70,7 @@ class HomeController < ActionController::Base
 		toReturn += render_fact('Status', response.status)
 		toReturn += render_fact('Error code', response.error_code)
 		toReturn += render_fact('Error message', response.error_message)
+		toReturn += render_fact('Is test user?', response.is_test_user)
     
 		if not data_processor
 			toReturn += render_fact('Data', response.data)
@@ -69,9 +79,46 @@ class HomeController < ActionController::Base
 		toReturn += '</div>'
     
 		if !data_processor.nil?
-			toReturn += data_processor.call(response.data)
+			if response.data.kind_of?(Array)
+				ct = 0
+				for index in 0 ... response.data.size
+					toReturn += "<div class='fact'><h4>[" + ct.to_s + "]</h4>"
+					toReturn += data_processor.call(response.data[index])
+					toReturn += "</div>"
+
+					ct += 1
+				end
+			else
+				toReturn += data_processor.call(response.data)
+			end
 		end
 		
+		return toReturn
+	end
+
+	def prettify_identity_snapshot(identity_snapshot)
+		toReturn = "<div class='fact'>"
+
+		toReturn += render_fact_heading("Snapshot details")
+		toReturn += prettify_identity_snapshot_details(identity_snapshot.details)
+
+		toReturn += render_fact_heading("Snapshot contents")
+		toReturn += prettify_claims(identity_snapshot.snapshot)
+
+		toReturn += "</div>"
+
+		return toReturn
+	end
+
+	def prettify_identity_snapshot_details(snapshot_details)
+	    toReturn = "<div class='fact'>"
+
+		toReturn += render_fact("Snapshot ID", snapshot_details.snapshot_id)
+		toReturn += render_fact("Username", snapshot_details.username)
+		toReturn += render_fact("Timestamp",  snapshot_details.timestamp_utc)
+		toReturn += render_fact("Was a test user?", snapshot_details.was_test_user)
+		toReturn += "</div>"
+
 		return toReturn
 	end
 	
@@ -236,5 +283,6 @@ end
 class HarnessViewModel
 	attr_accessor :consumer_key, :consumer_secret, :access_token, :access_token_secret
 	attr_accessor :oauth_details, :last_get_claims_result, :last_is_user_assured_result, :last_is_social_account_assured_result
+	attr_accessor :snapshot_id, :snapshot_details_id, :last_get_identity_snapshot_details_result, :last_create_identity_snapshot_result, :last_get_identity_snapshot_result
 	attr_accessor :show_assurance_image, :assurance_image_type, :social_account_id, :social_account_type, :show_oauth_details_required_error
 end
