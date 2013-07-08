@@ -16,6 +16,7 @@ class HomeController < ActionController::Base
 
 			@view_model.snapshot_id = request.POST['snapshot-id']
 			@view_model.snapshot_details_id = request.POST['snapshot-details-id']
+			@view_model.snapshot_pdf_id = request.POST['snapshot-pdf-id']
 
 			@view_model.assurance_image_type = request.POST['assurance-image-type']
 			
@@ -39,6 +40,9 @@ class HomeController < ActionController::Base
 				@view_model.last_get_identity_snapshot_details_result = prettify_response(api.get_identity_snapshot_details(@view_model.snapshot_details_id), self.method(:prettify_identity_snapshot_details))
 			elsif action == "get-identity-snapshot" && !@view_model.snapshot_id.nil?
 				@view_model.last_get_identity_snapshot_result = prettify_response(api.get_identity_snapshot(@view_model.snapshot_id), self.method(:prettify_identity_snapshot))
+			elsif action == "get-identity-snapshot-pdf" && !@view_model.snapshot_pdf_id.nil?
+				send_data(api.get_identity_snapshot_pdf(@view_model.snapshot_pdf_id), :type => "application/pdf", :disposition => 'attachment; filename="' + @view_model.snapshot_pdf_id + '"')
+				return
 			end
 		elsif !action.nil?
 			@view_model.show_oauth_details_required_error = true
@@ -286,4 +290,5 @@ class HarnessViewModel
 	attr_accessor :oauth_details, :last_get_claims_result, :last_is_user_assured_result, :last_is_social_account_assured_result
 	attr_accessor :snapshot_id, :snapshot_details_id, :last_get_identity_snapshot_details_result, :last_create_identity_snapshot_result, :last_get_identity_snapshot_result
 	attr_accessor :show_assurance_image, :assurance_image_type, :social_account_id, :social_account_type, :show_oauth_details_required_error
+	attr_accessor :snapshot_pdf_id
 end

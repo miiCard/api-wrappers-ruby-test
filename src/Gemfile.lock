@@ -51,7 +51,7 @@ GEM
       i18n (>= 0.4.0)
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
-    miiCardConsumers (2.1.0)
+    miiCardConsumers (2.2.0)
       json
       oauth
     mime-types (1.21)
