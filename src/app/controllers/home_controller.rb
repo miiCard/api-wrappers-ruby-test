@@ -20,6 +20,11 @@ class HomeController < ActionController::Base
 
 			@view_model.assurance_image_type = request.POST['assurance-image-type']
 			
+			@view_model.card_image_format = request.POST['card-image-format']
+			@view_model.card_image_snapshot_id = request.POST['card-image-snapshot-id']
+			@view_model.card_image_show_email_address = request.POST['card-image-show-email-address'] == "on"
+			@view_model.card_image_show_phone_number = request.POST['card-image-show-phone-number'] == "on"
+			
 			action = request.POST['btn-invoke']
 		end
 		
@@ -34,6 +39,8 @@ class HomeController < ActionController::Base
 				@view_model.last_is_social_account_assured_result = prettify_response(api.is_social_account_assured(@view_model.social_account_id, @view_model.social_account_type), nil)
 			elsif action == "assurance-image" && !@view_model.assurance_image_type.nil?
 				@view_model.show_assurance_image = true
+			elsif action == "card-image"
+				@view_model.show_card_image = true
 			elsif action == "create-identity-snapshot"
 				@view_model.last_create_identity_snapshot_result = prettify_response(api.create_identity_snapshot(), self.method(:prettify_identity_snapshot_details))
 			elsif action == "get-identity-snapshot-details"
@@ -61,10 +68,29 @@ class HomeController < ActionController::Base
 		type = request.GET['type']
 		
 		if !consumer_key.nil? && !consumer_secret.nil? && !access_token.nil? && !access_token_secret.nil? && !type.nil?
-			api = MiiCardOAuthClaimsService.new(consumer_key, consumer_secret, access_token, access_token_secret)			
+			api = MiiCardOAuthClaimsService.new(consumer_key, consumer_secret, access_token, access_token_secret)
 			img = api.assurance_image(type)
 			
-			send_data(img, :type => "image/png", :disposition => 'inline')
+			send_data(img, :type => 'image/png', :disposition => 'inline')
+		end
+	end
+
+	def cardimage
+		consumer_key = request.GET['oauth-consumer-key']
+		consumer_secret = request.GET['oauth-consumer-secret']
+		access_token = request.GET['oauth-access-token']
+		access_token_secret = request.GET['oauth-access-token-secret']
+
+		format = request.GET['format']
+		snapshot_id = request.GET['snapshot-id']
+		show_email_address = request.GET['show-email-address']
+		show_phone_number = request.GET['show-phone-number']
+
+		if !consumer_key.nil? && !consumer_secret.nil? && !access_token.nil? && !access_token_secret.nil? 
+			api = MiiCardOAuthClaimsService.new(consumer_key, consumer_secret, access_token, access_token_secret)
+			img = api.get_card_image(snapshot_id, show_email_address == 'true', show_phone_number == 'true', format)
+
+			send_data(img, :type => 'image/png', :disposition => 'inline')
 		end
 	end
 	
@@ -291,4 +317,5 @@ class HarnessViewModel
 	attr_accessor :snapshot_id, :snapshot_details_id, :last_get_identity_snapshot_details_result, :last_create_identity_snapshot_result, :last_get_identity_snapshot_result
 	attr_accessor :show_assurance_image, :assurance_image_type, :social_account_id, :social_account_type, :show_oauth_details_required_error
 	attr_accessor :snapshot_pdf_id
+	attr_accessor :card_image_snapshot_id, :card_image_format, :card_image_show_email_address, :card_image_show_phone_number, :show_card_image
 end

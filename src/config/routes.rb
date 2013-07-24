@@ -1,5 +1,6 @@
 RailsTestHarness::Application.routes.draw do
   match '/assuranceimage' => 'home#assuranceimage'
+  match '/cardimage' => 'home#cardimage'
   
   root :to => 'home#index'
   

@@ -122,6 +122,40 @@
                 <button type="submit" name="btn-invoke" value="assurance-image" class="btn btn-large">Invoke method &raquo;</button>
             </div>
         </div>
+
+<div class="page-header">
+            <h2>CardImage
+            <small>Renders a card-image representation of LOA</small>
+            </h2>
+        </div>
+        <div class="row">
+            <div class="span12">
+                <h3>Parameters</h3>
+                <label for="cardImageSnapshotId">Snapshot ID (optional)</label>
+                <input type="text" name="card-image-snapshot-id" value="<%=@view_model.card_image_snapshot_id%>" />
+
+                <label for="cardImageFormat">Format (card, signature)</label>
+                <input type="text" name="card-image-format" value="<%=@view_model.card_image_format%>" />
+
+                <% if @view_model.card_image_show_email_address %>
+                  <label class="checkbox"><input type="checkbox" name="card-image-show-email-address" checked="checked" value="on" /> Show email address</label>
+                <% else %>
+                  <label class="checkbox"><input type="checkbox" name="card-image-show-email-address" /> Show email address</label>
+                <% end %> 
+
+                <% if @view_model.card_image_show_phone_number %>
+                  <label class="checkbox"><input type="checkbox" name="card-image-show-phone-number" checked="checked" value="on" /> Show phone number</label>
+                <% else %>
+                  <label class="checkbox"><input type="checkbox" name="card-image-show-phone-number" /> Show phone number</label>
+                <% end %>
+
+                <h4>Result</h4>
+                <% if @view_model.show_card_image %>
+                <p><img src="/cardimage?oauth-consumer-key=<%=@view_model.consumer_key%>&oauth-consumer-secret=<%= u @view_model.consumer_secret%>&oauth-access-token=<%=u @view_model.access_token%>&&oauth-access-token-secret=<%=u @view_model.access_token_secret%>&snapshot-id=<%=u @view_model.card_image_snapshot_id%>&show-email-address=<%= @view_model.card_image_show_email_address.to_s %>&show-phone-number=<%= @view_model.card_image_show_phone_number.to_s %>&format=<%=u @view_model.card_image_format%>" /></p>
+                <% end %>
+                <button type="submit" name="btn-invoke" value="card-image" class="btn btn-large">Invoke method &raquo;</button>
+            </div>
+        </div>
         
         <div class="page-header">
             <h2>GetIdentitySnapshotDetails
