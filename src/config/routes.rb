@@ -1,9 +1,10 @@
 RailsTestHarness::Application.routes.draw do
   match '/assuranceimage' => 'home#assuranceimage'
   match '/cardimage' => 'home#cardimage'
+  match '/sha1' => 'home#sha1'
   
   root :to => 'home#index'
-  
+  get '/img/:name', to: redirect {|params, req| "/assets/#{params[:name]}.#{params[:format]}" }
   # The priority is based upon order of creation:
   # first created -> highest priority.
 
