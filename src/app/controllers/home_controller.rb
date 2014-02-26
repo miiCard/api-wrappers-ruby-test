@@ -29,6 +29,8 @@ class HomeController < ActionController::Base
 
 			@view_model.financial_data_modesty_limit = (request.POST['financial_data_modesty_limit'].to_s.empty?) ? nil : request.POST['financial_data_modesty_limit'].to_f
 			@view_model.financial_data_modesty_limit_raw = request.POST['financial_data_modesty_limit']
+			@view_model.financial_data_credit_cards_modesty_limit = (request.POST['financial_data_credit_cards_modesty_limit'].to_s.empty?) ? nil : request.POST['financial_data_credit_cards_modesty_limit'].to_f
+			@view_model.financial_data_credit_cards_modesty_limit_raw = request.POST['financial_data_credit_cards_modesty_limit']
 
 			@view_model.directory_criterion = request.POST['directory_criterion']
 			@view_model.directory_criterion_value = request.POST['directory_criterion_value']
@@ -70,11 +72,18 @@ class HomeController < ActionController::Base
 				@view_model.last_get_authentication_details_result = prettify_response(api.get_authentication_details(@view_model.authentication_details_snapshot_id), self.method(:prettify_authentication_details))
 			elsif action == "is-refresh-in-progress"
 				@view_model.last_is_refresh_in_progress_result = prettify_response(financial_api.is_refresh_in_progress(), nil)
+			elsif action == "is-refresh-in-progress-credit-cards"
+				@view_model.last_is_refresh_in_progress_credit_cards_result = prettify_response(financial_api.is_refresh_in_progress_credit_cards(), nil)
 			elsif action == "refresh-financial-data"
 				@view_model.last_refresh_financial_data_result = prettify_response(financial_api.refresh_financial_data(), self.method(:prettify_financial_refresh_status))
+			elsif action == "refresh-financial-data-credit-cards"
+				@view_model.last_refresh_financial_data_credit_cards_result = prettify_response(financial_api.refresh_financial_data_credit_cards(), self.method(:prettify_financial_refresh_status))
 			elsif action == "get-financial-transactions"
 				configuration = PrettifyConfiguration.new(@view_model.financial_data_modesty_limit)
 				@view_model.last_get_financial_transactions_result = prettify_response(financial_api.get_financial_transactions(), self.method(:prettify_financial_data), configuration)
+			elsif action == "get-financial-transactions-credit-cards"
+				configuration = PrettifyConfiguration.new(@view_model.financial_data_credit_cards_modesty_limit)
+				@view_model.last_get_financial_transactions_credit_cards_result = prettify_response(financial_api.get_financial_transactions_credit_cards(), self.method(:prettify_financial_data), configuration)
 			end
 		elsif !action.nil?
 			@view_model.show_oauth_details_required_error = true
@@ -456,20 +465,62 @@ class HomeController < ActionController::Base
         return to_return
     end
 
+    def render_financial_credit_card(credit_card, configuration)
+        to_return = "<div class='fact'>"
+
+        to_return += render_fact("Holder", credit_card.holder)
+        to_return += render_fact("Account number", credit_card.account_number)
+        to_return += render_fact("Account name", credit_card.account_name)
+        to_return += render_fact("Type", credit_card.type)
+        to_return += render_fact("Last updated", credit_card.last_updated_utc)
+        to_return += render_fact("Currency", credit_card.currency_iso)
+        to_return += render_fact("Credit limit", get_modesty_filtered_amount(credit_card.credit_limit, configuration))
+        to_return += render_fact("Running balance", get_modesty_filtered_amount(credit_card.running_balance, configuration))
+        to_return += render_fact("Credits (count)", credit_card.credits_count)
+        to_return += render_fact("Credits (sum)", get_modesty_filtered_amount(credit_card.credits_sum, configuration))
+        to_return += render_fact("Debits (count)", credit_card.debits_count)
+        to_return += render_fact("Debits (sum)", get_modesty_filtered_amount(credit_card.debits_sum, configuration))
+
+        to_return += render_fact_heading("Transactions");
+
+        to_return += "<table class='table table-striped table-condensed table-hover'><thead><tr><th>Date</th><th>Description</th><th class='r'>Credit</th><th class='r'>Debit</th></tr></thead><tbody>"
+
+		for transaction in credit_card.transactions || []
+			to_return += "<tr><td>%s</td><td title='ID: %s'>%s</td><td class='r'>%s</td><td class='r d'>%s</td></tr>" % [ render_as_date(transaction.date), transaction.id, render_possibly_null(transaction.description, '[None]'), get_modesty_filtered_amount(transaction.amount_credited, configuration), get_modesty_filtered_amount(transaction.amount_debited, configuration)]
+		end
+
+        to_return += "</tbody></table>"
+
+        to_return += "</div>"
+        return to_return
+    end
+
 	def render_financial_provider(financial_provider, configuration)
 		to_return = "<div class='fact'>"
 
         to_return += render_fact("Name", financial_provider.provider_name)
 
-        to_return += render_fact_heading("Financial Accounts")
-
         ct = 0
-		for account in financial_provider.financial_accounts || []
-			to_return += "<div class='fact'><h4>[#{ct}]</h4>"
-			to_return += render_financial_account(account, configuration)
-			to_return += "</div>"
+		if (!financial_provider.financial_accounts.nil? && !financial_provider.financial_accounts.empty?)
+			to_return += render_fact_heading("Financial Accounts")
 
-			ct += 1
+			for account in financial_provider.financial_accounts
+				to_return += "<div class='fact'><h4>[#{ct}]</h4>"
+				to_return += render_financial_account(account, configuration)
+				to_return += "</div>"
+
+				ct += 1
+			end
+		elsif (!financial_provider.financial_credit_cards.nil? && !financial_provider.financial_credit_cards.empty?)
+			to_return += render_fact_heading("Financial Credit Cards")
+
+			for credit_card in financial_provider.financial_credit_cards
+				to_return += "<div class='fact'><h4>[#{ct}]</h4>"
+				to_return += render_financial_credit_card(credit_card, configuration)
+				to_return += "</div>"
+
+				ct += 1
+			end
 		end
 
         to_return += "</div>"
@@ -522,7 +573,8 @@ class HarnessViewModel
 	attr_accessor :card_image_snapshot_id, :card_image_format, :card_image_show_email_address, :card_image_show_phone_number, :show_card_image
 	attr_accessor :authentication_details_snapshot_id, :last_get_authentication_details_result
 	attr_accessor :last_is_refresh_in_progress_result, :last_refresh_financial_data_result, :last_get_financial_transactions_result
-	attr_accessor :financial_data_modesty_limit, :financial_data_modesty_limit_raw
+	attr_accessor :last_is_refresh_in_progress_credit_cards_result, :last_refresh_financial_data_credit_cards_result, :last_get_financial_transactions_credit_cards_result
+	attr_accessor :financial_data_modesty_limit, :financial_data_modesty_limit_raw, :financial_data_credit_cards_modesty_limit, :financial_data_credit_cards_modesty_limit_raw
 
 	attr_accessor :directory_criterion, :directory_criterion_value, :directory_criterion_value_hashed
 	attr_accessor :last_directory_search_result
