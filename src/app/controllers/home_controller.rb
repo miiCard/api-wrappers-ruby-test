@@ -70,6 +70,10 @@ class HomeController < ActionController::Base
 				return
 			elsif action == "get-authentication-details"
 				@view_model.last_get_authentication_details_result = prettify_response(api.get_authentication_details(@view_model.authentication_details_snapshot_id), self.method(:prettify_authentication_details))
+			elsif action == "is-credit-bureau-refresh-in-progress"
+				@view_model.is_credit_bureau_refresh_in_progress_result = prettify_response(api.is_credit_bureau_refresh_in_progress(), nil)
+			elsif action == "refresh-credit-bureau-data"
+				@view_model.refresh_credit_bureau_data_result = prettify_response(api.refresh_credit_bureau_data(), self.method(:prettify_credit_bureau_refresh_status))
 			elsif action == "is-refresh-in-progress"
 				@view_model.last_is_refresh_in_progress_result = prettify_response(financial_api.is_refresh_in_progress(), nil)
 			elsif action == "is-refresh-in-progress-credit-cards"
@@ -266,6 +270,11 @@ class HomeController < ActionController::Base
 			ct += 1
 		end
 
+		toReturn += render_fact_heading('Credit bureau data')
+		if claims_obj.credit_bureau_verification
+			toReturn += render_credit_bureau_verification(claims_obj.credit_bureau_verification)
+		end
+
 		if claims_obj.public_profile
 			toReturn += "<div class='fact'>"
 			toReturn += prettify_claims(claims_obj.public_profile)
@@ -315,6 +324,16 @@ class HomeController < ActionController::Base
 
 			ct += 1
 		end
+
+        to_return += "</div>"
+
+        return to_return;
+	end
+
+	def prettify_credit_bureau_refresh_status(credit_bureau_refresh_status, configuration)
+        to_return = "<div class='fact'>"
+
+        to_return += render_fact('State', credit_bureau_refresh_status.state)
 
         to_return += "</div>"
 
@@ -430,6 +449,16 @@ class HomeController < ActionController::Base
         else
             to_return += render_fact("Approximate postal address", nil)
 		end
+
+        to_return += "</div>"
+        return to_return;
+	end
+
+	def render_credit_bureau_verification(verification)
+		to_return = "<div class='fact'>";
+
+        to_return += render_fact("Last verified", verification.last_verified)
+        to_return += render_fact("Data", verification.data)
 
         to_return += "</div>"
         return to_return;
@@ -572,6 +601,7 @@ class HarnessViewModel
 	attr_accessor :snapshot_pdf_id
 	attr_accessor :card_image_snapshot_id, :card_image_format, :card_image_show_email_address, :card_image_show_phone_number, :show_card_image
 	attr_accessor :authentication_details_snapshot_id, :last_get_authentication_details_result
+	attr_accessor :is_credit_bureau_refresh_in_progress_result, :refresh_credit_bureau_data_result
 	attr_accessor :last_is_refresh_in_progress_result, :last_refresh_financial_data_result, :last_get_financial_transactions_result
 	attr_accessor :last_is_refresh_in_progress_credit_cards_result, :last_refresh_financial_data_credit_cards_result, :last_get_financial_transactions_credit_cards_result
 	attr_accessor :financial_data_modesty_limit, :financial_data_modesty_limit_raw, :financial_data_credit_cards_modesty_limit, :financial_data_credit_cards_modesty_limit_raw
